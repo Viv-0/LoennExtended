@@ -1,7 +1,7 @@
 local utils = require("utils")
 local layers = require("mods").requireFromPlugin("libraries.api.layers")
 
-local layerDisplay = {_enabled = true, _type = "device"}
+local layerDisplay = {_enabled = true, _type = "device", _isLayerDisplay = true}
 
 function layerDisplay.draw()
     love.graphics.push()

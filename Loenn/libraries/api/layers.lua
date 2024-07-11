@@ -1,39 +1,40 @@
 local utils = require("utils")
+local mods = require("mods")
 
 local layersApi = {}
 
-local enabled = true
-local extSettings = require("mods").requireFromPlugin("libraries.settings")
-if not extSettings.enabled() or not extSettings.get("_enabled", true, "layers") then
-    enabled = false
+local extSettings = mods.requireFromPlugin("libraries.settings")
+local le_utils = mods.requireFromPlugin('libraries.utils')
+local entities = require("entities")
+local reloadPersistence = mods.requireFromPlugin('libraries.api.reloadPersistence')
+
+local function layersData(NIL) 
+    if not (extSettings and extSettings.enabled() and extSettings.get("_enabled", true, "layers")) then 
+        if NIL then return nil else return {} end 
+    else 
+        return reloadPersistence.getReloadPersistentTable().layers
+    end
 end
 
-local entities = require("entities")
 
 ---Gets the currently active layer
 ---@return number
 function layersApi.getCurrentLayer()
-    return enabled and entities.___lonnLayers.layer or 0
+    return layersData().layer or 0
 end
 
 ---Returns whether all layers are currently visible
 ---@return boolean
 function layersApi.isEveryLayerVisible()
-    if enabled then
-        return entities.___lonnLayers.any
-    else
-        return true
-    end
+    return layersData().any or true
 end
 
 ---Checks whether this item is in the currently active layer, by checking the input table's _editorLayer value.
 ---@param item table
 ---@return boolean
 function layersApi.isInCurrentLayer(item)
-    if not enabled or item._id == 0 then
-        return true
-    end
 
+    if item._id == 0 then return true end
     return layersApi.isEveryLayerVisible() or (item._editorLayer or 0) == layersApi.getCurrentLayer()
 end
 
@@ -52,6 +53,6 @@ function layersApi.setLayer(item, layer)
 end
 
 ---Alpha value that's used for tinting sprites from hidden layers
-layersApi.hiddenLayerAlpha = enabled and extSettings.get("hiddenLayerAlpha", 0.1, "layers") or 1
+layersApi.hiddenLayerAlpha = layersData(true) and extSettings.get("hiddenLayerAlpha", 0.1, "layers") or 1
 
 return layersApi

@@ -53,7 +53,7 @@ end
 ---@param font any|nil
 ---@param fontSize number|nil
 ---@param trim boolean|nil Whether to trim the text before rendering
-function textRender.printCenteredText(text, x, y, width, height, font, fontSize, trim)
+function textRender.printCenteredText(text, x, y, width, height, font, fontSize, trim, color)
     font = font or love.graphics.getFont()
     fontSize = fontSize or 1
 
@@ -68,7 +68,11 @@ function textRender.printCenteredText(text, x, y, width, height, font, fontSize,
     love.graphics.translate(x + offsetX, y + offsetY)
     love.graphics.scale(fontSize, fontSize)
 
-    love.graphics.printf(text, 0, 0, wrapLimit, "center")
+    if color then
+        love.graphics.printf({color, text})
+    else
+        love.graphics.printf(text, 0, 0, wrapLimit, "center")
+    end
 
     love.graphics.pop()
 end

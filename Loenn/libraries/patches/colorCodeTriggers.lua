@@ -9,7 +9,7 @@
       * always showing nodes
 
     NOTE: This file is *extremely* hacky, and completely rewrites some methods.
-]]
+
 local extSettings = require("mods").requireFromPlugin("libraries.settings")
 if not extSettings.enabled() or not extSettings.get("_enabled", true, "triggers") then
     return {}
@@ -42,9 +42,6 @@ end
 -- Make default backgrounds use alpha from backgroundAlpha
 colors.triggerColor = multColor({47 / 255, 114 / 255, 100 / 255, 1}, backgroundAlpha)
 
-if triggers.lonnExt_colorCodeTriggers then
-    triggers.lonnExt_colorCodeTriggers.unload()
-end
 
 -- edit colors
 local _orig_getDrawable = triggers.getDrawable
@@ -122,14 +119,6 @@ placementUtils.finalizePlacement = function(room, layer, item)
     if layer == "triggers" and not item._editorColor then
         item._editorColor = "265B50"
     end
-end
-
-triggers.lonnExt_colorCodeTriggers = {
-    unload = function ()
-        placementUtils.finalizePlacement = _orig_finalizePlacement
-        triggers.addDrawables = _orig_addDrawables
-        triggers.getDrawable = _orig_getDrawable
-    end
-}
+end]]
 
 return {}

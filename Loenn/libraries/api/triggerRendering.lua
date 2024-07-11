@@ -30,49 +30,105 @@ end
 -- Make default backgrounds use alpha from backgroundAlpha
 colors.triggerColor = multColor({47 / 255, 114 / 255, 100 / 255, 1}, backgroundAlpha)
 
----Gets the border color of a given trigger, taking into account the Editor Color property.
+---Gets the border color of a given trigger, taking into account the Editor Color property and the Handler Color override exposed by Lonn Extended.
 ---@param trigger table
 ---@return table
-function triggerRendering.getBorderColor(trigger)
+function triggerRendering.getBorderColor(trigger, room, handler)
     if trigger._editorColor then
         return utils.getColor(trigger._editorColor)
+    elseif handler and handler.lonnExt_triggerBorderColor then
+        local ret = utils.callIfFunction(handler.lonnExt_triggerBorderColor, room, trigger)
+        if type(ret) == "table" and #ret > 2 then
+            return ret
+        elseif type(ret) == "string" then
+            return utils.getColor(ret)
+        end
     end
     return colors.triggerBorderColor
 end
 
----Gets the background color of a given trigger, taking into account the Editor Color property.
+---Gets the background color of a given trigger, taking into account the Editor Color property and the Handler Color override exposed by Lonn Extended.
 ---@param trigger table
 ---@return table
-function triggerRendering.getBackgroundColor(trigger)
+function triggerRendering.getBackgroundColor(trigger, room, handler)
+    local color = colors.triggerColor
     if trigger._editorColor then
-        return multColor(triggerRendering.getBorderColor(trigger), backgroundAlpha)
+        color = triggerRendering.getBorderColor(trigger, room, handler)
+    elseif handler and handler.lonnExt_triggerColor then
+        local ret = utils.callIfFunction(handler.lonnExt_triggerColor, room, trigger)
+        if type(ret) == "table" and #ret > 2 then
+            color = ret
+        elseif type(ret) == "string" then
+            color = utils.getColor(ret)
+        end
     end
-    return colors.triggerColor
+    return multColor(color, backgroundAlpha)
+end
+
+function triggerRendering.getTextColor(trigger, room, handler, layerCheck)
+    layerCheck = layerCheck or true
+    local color = colors.triggerTextColor
+    if handler and handler.lonnExt_triggerTextColor then
+        local ret = utils.callIfFunction(handler.lonnExt_triggerTextColor, room, trigger)
+        if type(ret) == "table" and #ret > 2 then
+            color = ret
+        elseif type(ret) == "string" then
+            color = utils.getColor(ret)
+        end
+    end
+    
+    if layerCheck and not layers.isInCurrentLayer(trigger) then
+        color = multColor(color, layers.hiddenLayerAlpha)
+    end
+    return color
 end
 
 ---Returns the size of the font that should be used for trigger rendering
 ---@return number
-function triggerRendering.getFontSize()
+function triggerRendering.getFontSize(trigger, room, handler)
+    if handler and handler.lonnExt_triggerFontSize then
+        return utils.callIfFunction(handler.lonnExt_triggerFontSize, room, trigger)
+    end
     return triggerFontSize
 end
 
 ---Gets the drawable needed to render the background of a trigger, taking into account all Lonn Extended settings.
 ---@param trigger table
 ---@return table
-function triggerRendering.getTriggerDrawableBg(trigger)
+function triggerRendering.getTriggerDrawableBg(trigger, room, handler)
+    local handler = handler or triggers.registeredTriggers[trigger._name]
+
     local x = trigger.x or 0
     local y = trigger.y or 0
 
     local width = trigger.width or 16
     local height = trigger.height or 16
 
-    local borderColor = triggerRendering.getBorderColor(trigger)
-    local backgroundColor = triggerRendering.getBackgroundColor(trigger)
+    local borderColor = triggerRendering.getBorderColor(trigger, room, handler)
+    local backgroundColor = triggerRendering.getBackgroundColor(trigger, room, handler)
 
     -- add integration for layers
     if not layers.isInCurrentLayer(trigger) then
         borderColor = multColor(borderColor, layers.hiddenLayerAlpha)
         backgroundColor = multColor(backgroundColor, layers.hiddenLayerAlpha)
+    end
+
+    if handler and handler.lonnExt_overrideTriggerRect then
+        return drawableFunction.fromFunction(function() 
+            local pr,pg,pb,pa = love.graphics.getColor()
+            local pLineWidth = love.graphics.getLineWidth()
+            local pLineStyle = love.graphics.getLineStyle()
+            local pFont = love.graphics.getFont()
+            local pShader = love.graphics.getShader()
+
+            handler.lonnExt_overrideTriggerRect(room, trigger)
+
+            love.graphics.setColor(pr,pg,pb,pa)
+            love.graphics.setLine(pLineWidth, pLineStyle)
+            love.graphics.setFont(pFont)
+            love.graphics.setShader(pShader)
+
+        end)
     end
 
     local nodeDrawable
@@ -120,10 +176,16 @@ local humanizedNameCache = {}
 ---Gets the text that needs to be rendered for this trigger, taking into account all Lonn Extended settings
 ---@param trigger table
 ---@return string
-function triggerRendering.getDisplayText(trigger)
+function triggerRendering.getDisplayText(trigger, room, handler)
     local name = trigger._name
-    local displayName = humanizedNameCache[name]
+    local handler = handler or triggers.registeredTriggers[name]
 
+    if handler.triggerText then
+        return utils.callIfFunction(handler.triggerText, room, trigger)
+    end
+    
+    local displayName = humanizedNameCache[name]
+    
     if not displayName then
         -- NEW: trim mod name
         if trimModName and string.find(name, "/") then
@@ -135,8 +197,10 @@ function triggerRendering.getDisplayText(trigger)
 
         if extendedText then
             local handler = triggers.registeredTriggers[trigger._name]
-            if handler and handler._lonnExt_extendedText then
-                displayName = string.format("%s\n(%s)", displayName, utils.callIfFunction(handler._lonnExt_extendedText, trigger))
+            if handler then
+                if handler._lonnExt_extendedText then
+                    displayName = string.format("%s\n(%s)", displayName, utils.callIfFunction(handler._lonnExt_extendedText, trigger))
+                end
             end
         end
 

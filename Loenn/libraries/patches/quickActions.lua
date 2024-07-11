@@ -4,6 +4,9 @@
 ]]
 
 local extSettings = require("mods").requireFromPlugin("libraries.settings")
+
+if true then return {} end
+
 if not extSettings.enabled() or not extSettings.get("_enabled", true, "quickActions") then
     return {}
 end
@@ -134,7 +137,7 @@ local function getHotkeyCreationHandler(index)
                         local success, fromClipboard = utils.unserialize(clipboard, true, 3)
 
                         if success then
-                            print(utils.serialize(fromClipboard))
+                            --print(utils.serialize(fromClipboard))
 
                             local placement = fromClipboard[1]
 
